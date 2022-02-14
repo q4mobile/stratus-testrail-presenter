@@ -20,7 +20,7 @@ function getActionInputs(): ActionInputs {
     host: getInput("network_url"),
     user: getInput("username"),
     password: getInput("api_key"),
-    projectId: getInput("project_id") ? parseInt(getInput("project_id"), 10) : 0,
+    projectId: parseInt(getInput("project_id"), 10),
     runId: parseInt(getInput("run_id"), 10),
     branchName: getInput("current_branch"),
   };
