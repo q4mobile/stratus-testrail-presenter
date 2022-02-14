@@ -1,5 +1,4 @@
 import {
-  debug,
   getInput,
   setOutput,
   error as logError,
@@ -85,15 +84,6 @@ async function main(): Promise<void> {
   let result = "";
   try {
     const inputs = getActionInputs();
-    // const inputs: ActionInputs = {
-    //   host: "https://q4web.testrail.com",
-    //   user: "jiawei.luo@q4inc.com",
-    //   password: "wunT7F2P/vW.avt0Kwbt-rFNr85D42nqS2LRphwGw",
-    //   projectId: 27,
-    //   runId: 30744,
-    //   branchName: "QP-690",
-    // };
-    debug(`inputs: ${JSON.stringify(inputs)}`);
 
     // stop if no branch is provided
     // probably due to use in a non-pr workflow
@@ -105,10 +95,7 @@ async function main(): Promise<void> {
     const client = createClient(inputs.host, inputs.user, inputs.password);
 
     const runResult = await getRun(client, inputs.runId);
-    // debug(`run results: ${JSON.stringify(runResult)}`);
-
     const testResult = await getRunTests(client, inputs.runId);
-    // debug(`test result: ${JSON.stringify(testResult)}`);
 
     const runStats = buildRunStats(runResult);
     const testStats = buildRelatedTestStats(testResult, inputs.branchName);
