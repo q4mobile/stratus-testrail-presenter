@@ -1,0 +1,28 @@
+{
+  "name": "@q4/stratus-testrail-presenter",
+  "version": "1.0.0",
+  "description": "A Github Action that fetches test summaries from a TestRail test run and send comment to a pull request",
+  "main": "dist/index.js",
+  "repository": "https://github.com/q4mobile/stratus-testrail-presenter",
+  "engines": {
+    "node": "14.18.2"
+  },
+  "scripts": {
+    "start": "npx ncc run dist/index.js",
+    "build": "npx tsc",
+    "package": "ncc build --source-map",
+    "build:package": "npm run build && npm run package",
+    "build:start": "npm run build:package && npm start"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^17.0.16",
+    "@vercel/ncc": "^0.33.1",
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "@actions/core": "^1.6.0",
+    "testrail-api": "^1.3.6"
+  }
+}
