@@ -1,5 +1,0 @@
-{
-    "yaml.schemas": {
-        "https://json.schemastore.org/github-action.json": "file:///Users/jiaweiluo/Work/stratus-testrail-presenter/.github/workflows/build.yml"
-    }
-}
