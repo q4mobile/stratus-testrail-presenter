@@ -57,7 +57,7 @@ function buildRunStats(data: ITestRun) {
 }
 
 function buildRelatedTestStats(data: ITest[], branch: string) {
-  branch = branch.toLowerCase();
+  branch = branch.toLowerCase().split("/").splice(-1)[0];
   const summary = data.reduce((acc, datum) => {
     if (datum.refs && datum.refs.toLowerCase().includes(branch)) {
       acc.total++;
