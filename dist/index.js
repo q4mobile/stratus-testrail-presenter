@@ -26,7 +26,7 @@ function getActionInputs() {
         host: (0, core_1.getInput)("network_url"),
         user: (0, core_1.getInput)("username"),
         password: (0, core_1.getInput)("api_key"),
-        projectId: (0, core_1.getInput)("project_id") ? parseInt((0, core_1.getInput)("project_id"), 10) : 0,
+        projectId: parseInt((0, core_1.getInput)("project_id"), 10),
         runId: parseInt((0, core_1.getInput)("run_id"), 10),
         branchName: (0, core_1.getInput)("current_branch"),
     };
@@ -61,7 +61,7 @@ function buildRunStats(data) {
           🔗 -> ${data.url}`;
 }
 function buildRelatedTestStats(data, branch) {
-    branch = branch.toLowerCase();
+    branch = branch.toLowerCase().split("/").splice(-1)[0];
     const summary = data.reduce((acc, datum) => {
         if (datum.refs && datum.refs.toLowerCase().includes(branch)) {
             acc.total++;
@@ -88,15 +88,6 @@ function main() {
         let result = "";
         try {
             const inputs = getActionInputs();
-            // const inputs: ActionInputs = {
-            //   host: "https://q4web.testrail.com",
-            //   user: "jiawei.luo@q4inc.com",
-            //   password: "wunT7F2P/vW.avt0Kwbt-rFNr85D42nqS2LRphwGw",
-            //   projectId: 27,
-            //   runId: 30744,
-            //   branchName: "QP-690",
-            // };
-            (0, core_1.debug)(`inputs: ${JSON.stringify(inputs)}`);
             // stop if no branch is provided
             // probably due to use in a non-pr workflow
             if (!inputs.branchName) {
@@ -105,9 +96,7 @@ function main() {
             }
             const client = createClient(inputs.host, inputs.user, inputs.password);
             const runResult = yield getRun(client, inputs.runId);
-            // debug(`run results: ${JSON.stringify(runResult)}`);
             const testResult = yield getRunTests(client, inputs.runId);
-            // debug(`test result: ${JSON.stringify(testResult)}`);
             const runStats = buildRunStats(runResult);
             const testStats = buildRelatedTestStats(testResult, inputs.branchName);
             result =
