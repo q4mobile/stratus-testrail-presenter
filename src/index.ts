@@ -6,22 +6,31 @@ import {
 } from "@actions/core";
 import TestRailApiClient, { ITest, ITestRun } from "testrail-api";
 
+type TestRun = {
+  projectId: number,
+  suiteId: number,
+  runId: number,
+}
+
+export type TestRailOptions = {
+  host: string,
+  user: string,
+  password: string,
+}
 interface ActionInputs {
-  host: string;
-  user: string;
-  password: string;
-  projectId: number;
-  runId: number;
+  testRailOptions: TestRailOptions;
+  testRuns: TestRun[];
   branchName: string;
 }
 
 function getActionInputs(): ActionInputs {
   return {
-    host: getInput("network_url"),
-    user: getInput("username"),
-    password: getInput("api_key"),
-    projectId: parseInt(getInput("project_id"), 10),
-    runId: parseInt(getInput("run_id"), 10),
+    testRailOptions: {
+      host: getInput("network_url"),
+      user: getInput("username"),
+      password: getInput("api_key"),
+    },
+    testRuns: JSON.parse(getInput("test_runs")),
     branchName: getInput("current_branch"),
   };
 }
@@ -80,30 +89,35 @@ function buildRelatedTestStats(data: ITest[], branch: string) {
           ${summary.total} tests in total | ${summary.passed} passed ✅ - ${summary.failed} failed ❌`;
 }
 
+async function reportTestRun(testRailOptions: TestRailOptions, testRun: TestRun, branchName: string): Promise<string> {
+  const client = createClient(testRailOptions.host, testRailOptions.user, testRailOptions.password);
+
+  const runResult = await getRun(client, testRun.runId);
+  const testResult = await getRunTests(client, testRun.runId);
+
+  const runStats = buildRunStats(runResult);
+  const testStats = buildRelatedTestStats(testResult, branchName);
+  return `
+  ${runStats}
+  ${testStats}
+  =================================================================
+  
+  `;
+}
+
 async function main(): Promise<void> {
   let result = "";
   try {
     const inputs = getActionInputs();
-
     // stop if no branch is provided
     // probably due to use in a non-pr workflow
     if (!inputs.branchName) {
       setFailed("Target branch name not found");
       return;
     }
-
-    const client = createClient(inputs.host, inputs.user, inputs.password);
-
-    const runResult = await getRun(client, inputs.runId);
-    const testResult = await getRunTests(client, inputs.runId);
-
-    const runStats = buildRunStats(runResult);
-    const testStats = buildRelatedTestStats(testResult, inputs.branchName);
-    result = 
-    `
-    ${runStats}
-    ${testStats}
-    `;
+    for (const testRun of inputs.testRuns) {
+      result += await reportTestRun(inputs.testRailOptions, testRun, inputs.branchName);
+    }
   } catch (err) {
     const errMsg: string = err instanceof Error ? err.message : err as string;
     logError(errMsg);
@@ -112,5 +126,4 @@ async function main(): Promise<void> {
     setActionOutput("run_result", result);
   }
 }
-
 main();

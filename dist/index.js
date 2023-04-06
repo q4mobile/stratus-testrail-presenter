@@ -23,11 +23,12 @@ const core_1 = __nccwpck_require__(2186);
 const testrail_api_1 = __importDefault(__nccwpck_require__(5381));
 function getActionInputs() {
     return {
-        host: (0, core_1.getInput)("network_url"),
-        user: (0, core_1.getInput)("username"),
-        password: (0, core_1.getInput)("api_key"),
-        projectId: parseInt((0, core_1.getInput)("project_id"), 10),
-        runId: parseInt((0, core_1.getInput)("run_id"), 10),
+        testRailOptions: {
+            host: (0, core_1.getInput)("network_url"),
+            user: (0, core_1.getInput)("username"),
+            password: (0, core_1.getInput)("api_key"),
+        },
+        testRuns: JSON.parse((0, core_1.getInput)("test_runs")),
         branchName: (0, core_1.getInput)("current_branch"),
     };
 }
@@ -83,6 +84,21 @@ function buildRelatedTestStats(data, branch) {
     return `Related Tests for [${branch}]:
           ${summary.total} tests in total | ${summary.passed} passed ✅ - ${summary.failed} failed ❌`;
 }
+function reportTestRun(testRailOptions, testRun, branchName) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const client = createClient(testRailOptions.host, testRailOptions.user, testRailOptions.password);
+        const runResult = yield getRun(client, testRun.runId);
+        const testResult = yield getRunTests(client, testRun.runId);
+        const runStats = buildRunStats(runResult);
+        const testStats = buildRelatedTestStats(testResult, branchName);
+        return `
+  ${runStats}
+  ${testStats}
+  =================================================================
+  
+  `;
+    });
+}
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         let result = "";
@@ -94,16 +110,9 @@ function main() {
                 (0, core_1.setFailed)("Target branch name not found");
                 return;
             }
-            const client = createClient(inputs.host, inputs.user, inputs.password);
-            const runResult = yield getRun(client, inputs.runId);
-            const testResult = yield getRunTests(client, inputs.runId);
-            const runStats = buildRunStats(runResult);
-            const testStats = buildRelatedTestStats(testResult, inputs.branchName);
-            result =
-                `
-    ${runStats}
-    ${testStats}
-    `;
+            for (const testRun of inputs.testRuns) {
+                result += yield reportTestRun(inputs.testRailOptions, testRun, inputs.branchName);
+            }
         }
         catch (err) {
             const errMsg = err instanceof Error ? err.message : err;
