@@ -115,7 +115,6 @@ async function main(): Promise<void> {
       setFailed("Target branch name not found");
       return;
     }
-    console.log(inputs.testRuns)
     for (const testRun of inputs.testRuns) {
       result += await reportTestRun(inputs.testRailOptions, testRun, inputs.branchName);
     }
