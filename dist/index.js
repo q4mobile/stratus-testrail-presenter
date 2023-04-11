@@ -110,6 +110,7 @@ function main() {
                 (0, core_1.setFailed)("Target branch name not found");
                 return;
             }
+            console.log(inputs.testRuns);
             for (const testRun of inputs.testRuns) {
                 result += yield reportTestRun(inputs.testRailOptions, testRun, inputs.branchName);
             }
