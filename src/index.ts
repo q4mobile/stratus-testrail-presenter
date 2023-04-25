@@ -2,26 +2,36 @@ import {
   getInput,
   setOutput,
   error as logError,
-  setFailed
+  setFailed,
 } from "@actions/core";
 import TestRailApiClient, { ITest, ITestRun } from "testrail-api";
 
-interface ActionInputs {
+type TestRun = {
+  projectId: number;
+  suiteId: number;
+  runId: number;
+};
+
+export type TestRailOptions = {
   host: string;
   user: string;
   password: string;
-  projectId: number;
-  runId: number;
+};
+
+interface ActionInputs {
+  testRailOptions: TestRailOptions;
+  testRuns: TestRun[];
   branchName: string;
 }
 
 function getActionInputs(): ActionInputs {
   return {
-    host: getInput("network_url"),
-    user: getInput("username"),
-    password: getInput("api_key"),
-    projectId: parseInt(getInput("project_id"), 10),
-    runId: parseInt(getInput("run_id"), 10),
+    testRailOptions: {
+      host: getInput("network_url"),
+      user: getInput("username"),
+      password: getInput("api_key"),
+    },
+    testRuns: JSON.parse(getInput("test_runs")),
     branchName: getInput("current_branch"),
   };
 }
@@ -49,8 +59,16 @@ async function getRunTests(client: TestRailApiClient, runId: number) {
 }
 
 function buildRunStats(data: ITestRun) {
-  const totalTests = data.passed_count + data.blocked_count + data.untested_count + data.retest_count + data.failed_count;
-  const percentage = totalTests > 0 ? `${Math.round(data.passed_count / totalTests * 100)}%` : "N/A";
+  const totalTests =
+    data.passed_count +
+    data.blocked_count +
+    data.untested_count +
+    data.retest_count +
+    data.failed_count;
+  const percentage =
+    totalTests > 0
+      ? `${Math.round((data.passed_count / totalTests) * 100)}%`
+      : "N/A";
   return `TestRail Run Summary:
           ${percentage} of All Tests Passed | ${data.passed_count} passed ✅ - ${data.failed_count} failed ❌
           🔗 -> ${data.url}`;
@@ -58,26 +76,49 @@ function buildRunStats(data: ITestRun) {
 
 function buildRelatedTestStats(data: ITest[], branch: string) {
   branch = branch.toLowerCase().split("/").splice(-1)[0];
-  const summary = data.reduce((acc, datum) => {
-    if (datum.refs && datum.refs.toLowerCase().includes(branch)) {
-      acc.total++;
-      // 1 for passed
-      if (datum.status_id === 1) {
-        acc.passed++;
+
+  const summary = data.reduce(
+    (acc, datum) => {
+      if (datum.refs && datum.refs.toLowerCase().includes(branch)) {
+        acc.total++;
+        // 1 for passed
+        if (datum.status_id === 1) {
+          acc.passed++;
+        }
+        // 5 for failed
+        else if (datum.status_id === 5) {
+          acc.failed++;
+        }
       }
-      // 5 for failed
-      else if (datum.status_id === 5) {
-        acc.failed++;
-      }
+      return acc;
+    },
+    {
+      total: 0,
+      passed: 0,
+      failed: 0,
     }
-    return acc;
-  }, {
-    total: 0,
-    passed: 0,
-    failed: 0,
-  });
+  );
+
   return `Related Tests for [${branch}]:
           ${summary.total} tests in total | ${summary.passed} passed ✅ - ${summary.failed} failed ❌`;
+}
+
+async function reportTestRun(
+  client: TestRailApiClient,
+  testRun: TestRun,
+  branchName: string
+): Promise<string> {
+  const runResult = await getRun(client, testRun.runId);
+  const testResult = await getRunTests(client, testRun.runId);
+
+  const runStats = buildRunStats(runResult);
+  const testStats = buildRelatedTestStats(testResult, branchName);
+  return `
+  ${runStats}
+  ${testStats}
+  =================================================================
+  
+  `;
 }
 
 async function main(): Promise<void> {
@@ -92,20 +133,18 @@ async function main(): Promise<void> {
       return;
     }
 
-    const client = createClient(inputs.host, inputs.user, inputs.password);
+    const client = createClient(
+      inputs.testRailOptions.host,
+      inputs.testRailOptions.user,
+      inputs.testRailOptions.password
+    );
 
-    const runResult = await getRun(client, inputs.runId);
-    const testResult = await getRunTests(client, inputs.runId);
-
-    const runStats = buildRunStats(runResult);
-    const testStats = buildRelatedTestStats(testResult, inputs.branchName);
-    result = 
-    `
-    ${runStats}
-    ${testStats}
-    `;
+    for (const testRun of inputs.testRuns) {
+      result += await reportTestRun(client, testRun, inputs.branchName);
+    }
   } catch (err) {
-    const errMsg: string = err instanceof Error ? err.message : err as string;
+    const errMsg: string = err instanceof Error ? err.message : (err as string);
+
     logError(errMsg);
     result = "N/A";
   } finally {

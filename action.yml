@@ -11,15 +11,12 @@ inputs:
   api_key:
     required: true
     description: The API key associated with the username
-  run_id:
+  test_runs:
     required: true
-    description: The ID of the Testrail run
+    description: The list of test runs to report
   current_branch:
     required: true
     description: Used to determine the related tests, e.g., QP-XXX
-  project_id:
-    required: false
-    description: The project ID of the Testrail project
 runs:
   using: 'node12'
   main: 'dist/index.js'
