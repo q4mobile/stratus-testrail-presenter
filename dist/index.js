@@ -48,8 +48,14 @@ function getRunTests(client, runId) {
     });
 }
 function buildRunStats(data) {
-    const totalTests = data.passed_count + data.blocked_count + data.untested_count + data.retest_count + data.failed_count;
-    const percentage = totalTests > 0 ? `${Math.round(data.passed_count / totalTests * 100)}%` : "N/A";
+    const totalTests = data.passed_count +
+        data.blocked_count +
+        data.untested_count +
+        data.retest_count +
+        data.failed_count;
+    const percentage = totalTests > 0
+        ? `${Math.round((data.passed_count / totalTests) * 100)}%`
+        : "N/A";
     return `TestRail Run Summary:
           ${percentage} of All Tests Passed | ${data.passed_count} passed ✅ - ${data.failed_count} failed ❌
           🔗 -> ${data.url}`;
