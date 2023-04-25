@@ -17,6 +17,7 @@ export type TestRailOptions = {
   user: string;
   password: string;
 };
+
 interface ActionInputs {
   testRailOptions: TestRailOptions;
   testRuns: TestRun[];
