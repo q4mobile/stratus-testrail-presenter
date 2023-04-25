@@ -89,9 +89,7 @@ function buildRelatedTestStats(data: ITest[], branch: string) {
           ${summary.total} tests in total | ${summary.passed} passed ✅ - ${summary.failed} failed ❌`;
 }
 
-async function reportTestRun(testRailOptions: TestRailOptions, testRun: TestRun, branchName: string): Promise<string> {
-  const client = createClient(testRailOptions.host, testRailOptions.user, testRailOptions.password);
-
+async function reportTestRun(client: TestRailApiClient, testRun: TestRun, branchName: string): Promise<string> {
   const runResult = await getRun(client, testRun.runId);
   const testResult = await getRunTests(client, testRun.runId);
 
@@ -109,21 +107,28 @@ async function main(): Promise<void> {
   let result = "";
   try {
     const inputs = getActionInputs();
+    
     // stop if no branch is provided
     // probably due to use in a non-pr workflow
     if (!inputs.branchName) {
       setFailed("Target branch name not found");
       return;
     }
+
+    const client = createClient(inputs.testRailOptions.host, inputs.testRailOptions.user, inputs.testRailOptions.password);
+    
     for (const testRun of inputs.testRuns) {
-      result += await reportTestRun(inputs.testRailOptions, testRun, inputs.branchName);
+      result += await reportTestRun(client, testRun, inputs.branchName);
     }
+    
   } catch (err) {
     const errMsg: string = err instanceof Error ? err.message : err as string;
+    
     logError(errMsg);
     result = "N/A";
   } finally {
     setActionOutput("run_result", result);
   }
 }
+
 main();
